@@ -15,7 +15,10 @@ def minimax_move(state, max_depth:int, eval_func:Callable) -> Tuple[int, int]:
     """
 
     rootPlayer = state.player
-    best_move = None
+    movimentos_legais = state.legal_moves()
+    if not movimentos_legais:
+        return None
+    best_move = next(iter(movimentos_legais))
     v = -float('inf')
     alpha = -float('inf')
     beta = float('inf')
