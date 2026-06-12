@@ -23,16 +23,11 @@ def make_move(state : GameState) -> Tuple[int, int]:
         if elapsed >= TIME_LIMIT:
             break
         try:
-            t0 = time.time()
             move = minimax_move(state, depth, evaluate_custom, 
                                 start_time=start_time)
             best_move = move
-            print(f"depth={depth} | time={time.time()-t0:.3f}s | move={move}")
         except SearchTimeout:
-            print(f"depth={depth} | TIMEOUT")
             break
-
-        print(depth)
 
     return best_move
 
