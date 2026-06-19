@@ -3,6 +3,8 @@ from typing import Tuple
 from ..othello.gamestate import GameState
 from ..othello.board import Board
 from .minimax import minimax_move
+from .minimax import SearchTimeout
+import time
 
 # Voce pode criar funcoes auxiliares neste arquivo
 # e tambem modulos auxiliares neste pacote.
@@ -24,6 +26,7 @@ EVAL_TEMPLATE = [
     [100, -30, 6, 2, 2, 6, -30, 100]
 ]
 
+TIME_LIMIT = 4.7 
 
 def make_move(state) -> Tuple[int, int]:
     """
@@ -37,7 +40,24 @@ def make_move(state) -> Tuple[int, int]:
     # Remova-o e coloque uma chamada para o minimax_move (que vc implementara' no modulo minimax).
     # A chamada a minimax_move deve receber sua funcao evaluate como parametro.
 
-    return minimax_move(state,4,evaluate_mask)
+    """start_time = time.time()
+    best_move = None
+
+    for depth in range(1, 20):  # teto alto; o tempo vai parar antes
+        elapsed = time.time() - start_time
+        if elapsed >= TIME_LIMIT:
+            break
+        try:
+            move = minimax_move(state, depth, evaluate_mask, 
+                                start_time=start_time)
+            best_move = move
+        except SearchTimeout:
+            break
+
+        print(depth)
+
+    return best_move"""
+    return minimax_move(state, 4, evaluate_mask)
 
 
 def evaluate_mask(state:GameState, player:str) -> float:

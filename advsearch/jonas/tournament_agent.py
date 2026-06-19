@@ -2,8 +2,8 @@ from typing import Tuple
 from ..othello.gamestate import GameState
 from ..othello.board import Board
 from .othello_minimax_mask import evaluate_mask
-from .minimax_custom import minimax_move
-from .minimax_custom import SearchTimeout
+from .minimax import minimax_move_tournament
+from .minimax import SearchTimeout
 import time
 
 # Voce pode criar funcoes auxiliares neste arquivo
@@ -14,6 +14,17 @@ import time
 
 TIME_LIMIT = 4.7 
 
+EVAL_TEMPLATE = [
+    [100, -30, 6, 2, 2, 6, -30, 100],
+    [-30, -50, 1, 1, 1, 1, -50, -30],
+    [  6,   1, 1, 1, 1, 1,   1,   6],
+    [  2,   1, 1, 3, 3, 1,   1,   2],
+    [  2,   1, 1, 3, 3, 1,   1,   2],
+    [  6,   1, 1, 1, 1, 1,   1,   6],
+    [-30, -50, 1, 1, 1, 1, -50, -30],
+    [100, -30, 6, 2, 2, 6, -30, 100]
+]
+
 def make_move(state : GameState) -> Tuple[int, int]:
     start_time = time.time()
     best_move = None
@@ -23,72 +34,69 @@ def make_move(state : GameState) -> Tuple[int, int]:
         if elapsed >= TIME_LIMIT:
             break
         try:
-            move = minimax_move(state, depth, evaluate_custom, 
+            move = minimax_move_tournament(state, depth, evaluate_custom, 
                                 start_time=start_time)
             best_move = move
         except SearchTimeout:
             break
 
+        print(depth)
+
+
     return best_move
 
+def heuristica_cantos(board, player):
+    opponent = board.opponent(player)
 
-def evaluate_custom(state : GameState, player:str) -> float:
-    phase = game_phase(state)
+    cantos_player = 0
+    cantos_opp = 0
 
-    
-    mob        = mobility_score(state, player)
-    pos        = evaluate_mask(state, player)
-    pdiff      = piece_difference_score(state.board, player)
+    for x, y in [(0,0), (0,7), (7,0), (7,7)]:
+        piece = board.tiles[x][y]
 
-    if phase == 'early':
-        return (
-            100 * mob +
-             30 * pos +
-              5 * pdiff
-        )
-    elif phase == 'mid':
-        return (
-             70 * mob +
-             50 * pos +
-             15 * pdiff
-        )
-    else:
-        return (
-             30 * mob +
-             20 * pos +
-            100 * pdiff
-        )
+        if piece == player:
+            cantos_player += 1
+        elif piece == opponent:
+            cantos_opp += 1
 
+    return 100 * (cantos_player - cantos_opp)
 
-def mobility_score(state : GameState, player):
-    """Mobilidade relativa: movimentos meus vs do oponente"""
-    my_moves = len(state.board.legal_moves(player))
+def heuristica_mobilidade(state, player):
+    board = state.get_board()
 
-    opponent = 'W' if player == 'B' else 'B'
-    
-    opponent_moves = len(state.board.legal_moves(opponent))
-    
+    player_moves = len(board.legal_moves(player))
+    opponent_moves = len(board.legal_moves(board.opponent(player)))
 
-    if my_moves + opponent_moves == 0:
-        return 0
-    
-    return 100 * (my_moves - opponent_moves) / (my_moves + opponent_moves + 1)
+    total = player_moves + opponent_moves
 
-def piece_difference_score(board : Board, player):
-    player_pieces = board.piece_count[player]
-    opponent = 'W' if player == 'B' else 'B'
-    opp_pieces = board.piece_count[opponent]
-    total = player_pieces + opp_pieces
     if total == 0:
         return 0
-    return 100 * (player_pieces - opp_pieces) / total
 
-def game_phase(state):
-    total = state.board.piece_count['W'] + state.board.piece_count['B']
-    
-    if total < 20:
-        return 'early'
-    elif total < 50:
-        return 'mid'
-    else:
-        return 'late'
+    return 100 * (player_moves - opponent_moves) / total
+
+
+def evaluate_custom(state, player:str) -> float:
+    """
+    Evaluates an othello state from the point of view of the given player. 
+    If the state is terminal, returns its utility. 
+    If non-terminal, returns an estimate of its value based on your custom heuristic
+    :param state: state to evaluate (instance of GameState)
+    :param player: player to evaluate the state for (B or W)
+    """
+    #return 0    # substitua pelo seu codigo
+
+    board = state.get_board()
+
+    opponent = board.opponent(player)
+
+    ans_canto = 0
+
+
+    if (board.num_pieces(player) + board.num_pieces(opponent)) >= 52:######################
+        return board.num_pieces(player) - board.num_pieces(opponent)
+
+    ans_canto = heuristica_cantos(board, player)
+            
+    ans_mobilidade = heuristica_mobilidade(state, player)
+
+    return (90 * ans_canto) + (10 * ans_mobilidade) #+ (10 * ans_mask)
